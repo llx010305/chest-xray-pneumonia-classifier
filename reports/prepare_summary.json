@@ -1,0 +1,45 @@
+{
+  "target_images": 3000,
+  "max_class_ratio": 1.5,
+  "seed": 42,
+  "before_dedup": {
+    "chittagong|NORMAL": 1320,
+    "chittagong|PNEUMONIA": 1306,
+    "kermany|NORMAL": 1583,
+    "kermany|PNEUMONIA": 4273
+  },
+  "dropped_duplicates": 638,
+  "duplicate_reasons": {
+    "sha256": 159,
+    "tiny_sig": 479
+  },
+  "after_dedup": {
+    "chittagong|NORMAL": 1252,
+    "chittagong|PNEUMONIA": 768,
+    "kermany|NORMAL": 1579,
+    "kermany|PNEUMONIA": 4245
+  },
+  "working_set": {
+    "chittagong|NORMAL": 750,
+    "chittagong|PNEUMONIA": 750,
+    "kermany|NORMAL": 750,
+    "kermany|PNEUMONIA": 750
+  },
+  "splits": {
+    "test|NORMAL": 222,
+    "test|PNEUMONIA": 219,
+    "train|NORMAL": 1053,
+    "train|PNEUMONIA": 1052,
+    "val|NORMAL": 225,
+    "val|PNEUMONIA": 229
+  },
+  "class_counts": {
+    "NORMAL": 1500,
+    "PNEUMONIA": 1500
+  },
+  "source_counts": {
+    "chittagong": 1500,
+    "kermany": 1500
+  },
+  "manifest": "reports\\manifest.csv"
+}
