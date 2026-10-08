@@ -1,0 +1,42 @@
+seed: 42
+target_images: 3000
+max_class_ratio: 1.5
+min_images_per_source: 400
+image_size: 224
+denoise_ksize: 3
+percentile_low: 1.0
+percentile_high: 99.0
+benchmark_images: 100
+splits:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+baseline:
+  C: 1.0
+  max_iter: 500
+training:
+  epochs: 6
+  patience: 2
+  batch_size: 16
+  lr_backbone: 0.00001
+  lr_head: 0.0001
+  weight_decay: 0.0001
+sources:
+  - id: kermany
+    name: "Labeled OCT and Chest X-Ray Images for Classification"
+    version: "2"
+    doi: "10.17632/rscbjbr9sj.2"
+    url: "https://data.mendeley.com/datasets/rscbjbr9sj/2"
+    license: "CC BY 4.0"
+    file_name: "ChestXRay2017.zip"
+    download_url: "https://data.mendeley.com/public-files/datasets/rscbjbr9sj/files/f12eaf6d-6023-432f-acc9-80c9d7393433/file_downloaded"
+    citation: "Kermany, Daniel; Zhang, Kang; Goldbaum, Michael (2018), \"Labeled Optical Coherence Tomography (OCT) and Chest X-Ray Images for Classification\", Mendeley Data, V2, doi: 10.17632/rscbjbr9sj.2"
+  - id: chittagong
+    name: "A Primary Chest X-ray Dataset of Normal and Pneumonia Cases from Epic Chittagong, Bangladesh"
+    version: "4"
+    doi: "10.17632/wndbd5r26y.4"
+    url: "https://data.mendeley.com/datasets/wndbd5r26y/4"
+    license: "CC BY 4.0"
+    file_name: "epic_chittagong_v4.zip"
+    download_url: "https://data.mendeley.com/public-api/zip/wndbd5r26y/download/4"
+    citation: "HIRA, MD IRFANUL KABIR; BITHEE, MST MORIOM AKTER; Ahmed, Shafee; Akter, Laboni; Anonna, Mst.Jannatul Mawa (2026), \"A Primary Chest X-ray Dataset of Normal and Pneumonia Cases from Epic Chittagong, Bangladesh\", Mendeley Data, V4, doi: 10.17632/wndbd5r26y.4"
