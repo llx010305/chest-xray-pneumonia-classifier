@@ -1,0 +1,18 @@
+# data (rebuilt by the pipeline)
+data/
+
+# model weights
+reports/models/
+*.pt
+*.joblib
+
+# compiled C++
+cpp/median_denoise
+cpp/median_denoise.exe
+
+# Python / OS junk
+__pycache__/
+*.pyc
+.cache/
+.DS_Store
+__MACOSX/
