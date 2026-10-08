@@ -1,0 +1,124 @@
+{
+  "logistic_regression": {
+    "auc_roc": 0.9083467028672507,
+    "threshold": 0.97427513,
+    "sensitivity": 0.7214611872146118,
+    "specificity": 0.9369369369369369,
+    "accuracy": 0.8299319727891157,
+    "tp": 158,
+    "tn": 208,
+    "fp": 14,
+    "fn": 61,
+    "confusion_matrix": [
+      [
+        208,
+        14
+      ],
+      [
+        61,
+        158
+      ]
+    ],
+    "model": "logistic_regression",
+    "at_threshold_0_5": {
+      "auc_roc": 0.9083467028672507,
+      "threshold": 0.5,
+      "sensitivity": 0.821917808219178,
+      "specificity": 0.8288288288288288,
+      "accuracy": 0.8253968253968254,
+      "tp": 180,
+      "tn": 184,
+      "fp": 38,
+      "fn": 39,
+      "confusion_matrix": [
+        [
+          184,
+          38
+        ],
+        [
+          39,
+          180
+        ]
+      ]
+    },
+    "auc_bootstrap95": {
+      "auc": 0.9083467028672507,
+      "ci95_low": 0.8804190911783957,
+      "ci95_high": 0.9338372088738328,
+      "resamples": 2000
+    }
+  },
+  "resnet18": {
+    "auc_roc": 0.9243284380270682,
+    "threshold": 0.6312412,
+    "sensitivity": 0.8127853881278538,
+    "specificity": 0.9459459459459459,
+    "accuracy": 0.8798185941043084,
+    "tp": 178,
+    "tn": 210,
+    "fp": 12,
+    "fn": 41,
+    "confusion_matrix": [
+      [
+        210,
+        12
+      ],
+      [
+        41,
+        178
+      ]
+    ],
+    "model": "resnet18",
+    "at_threshold_0_5": {
+      "auc_roc": 0.9243284380270682,
+      "threshold": 0.5,
+      "sensitivity": 0.821917808219178,
+      "specificity": 0.9054054054054054,
+      "accuracy": 0.8639455782312925,
+      "tp": 180,
+      "tn": 201,
+      "fp": 21,
+      "fn": 39,
+      "confusion_matrix": [
+        [
+          201,
+          21
+        ],
+        [
+          39,
+          180
+        ]
+      ]
+    },
+    "auc_bootstrap95": {
+      "auc": 0.9243284380270682,
+      "ci95_low": 0.8982905740499069,
+      "ci95_high": 0.9476255568248247,
+      "resamples": 2000
+    },
+    "gradcam_examples": [
+      {
+        "cell": "TP",
+        "image_id": "kermany_PNEUMONIA_0373"
+      },
+      {
+        "cell": "TN",
+        "image_id": "chittagong_NORMAL_0009"
+      },
+      {
+        "cell": "FP",
+        "image_id": "kermany_NORMAL_0192"
+      },
+      {
+        "cell": "FN",
+        "image_id": "chittagong_PNEUMONIA_0258"
+      }
+    ]
+  },
+  "auc_difference_resnet_minus_logistic": {
+    "difference": 0.01598173515981749,
+    "ci95_low": -0.003213716161591654,
+    "ci95_high": 0.036521022402970525,
+    "resamples": 2000
+  }
+}
