@@ -1,5 +1,9 @@
 # Chest X-ray pneumonia classifier
 
+**TL;DR:** Logistic regression on handcrafted features vs a fine-tuned ResNet-18 on a de-duplicated, class-balanced 3,000-image chest X-ray set. Test ROC AUC 0.908 vs 0.924. The paired bootstrap CI for the difference includes zero. This is a research comparison, not a diagnostic device.
+
+![Test ROC](reports/figures/roc_test.png)
+
 ## Abstract
 
 I assembled a 3,000-image chest X-ray working set from two CC BY 4.0 Mendeley datasets, removed duplicate files, and kept the pneumonia and normal classes equal. A logistic regression on handcrafted features reached a held-out ROC AUC of 0.908, and a fine-tuned ResNet-18 reached 0.924. A paired bootstrap interval for that 0.016 difference included zero. The project is a reproducible comparison of a classical baseline and a convolutional network, including preprocessing, a statistical check on the images, and Grad-CAM. It is not a diagnostic device.
@@ -64,7 +68,7 @@ The median filter is a separate C++ program, `cpp/median_denoise.cpp`, compiled 
 
 The full 3,000-image denoise used by training took 29.4 s in the C++ program. The NumPy reference is faster on this machine: it is vectorized, and its timer does not include process startup or file I/O. The C++ binary is a scalar 32-bit build (`g++ 15.2.0`, i686 MinGW). The pipeline still runs that executable so the comparison is the one the training images actually went through.
 
-Training augmentation, applied only to the training split, is a horizontal flip (probability 0.5), a rotation of ±15 degrees, and a contrast scale drawn from 0.8–1.2.
+Training augmentation, applied only to the training split, is a horizontal flip (probability 0.5), a rotation of ±15 degrees, and a contrast scale drawn from 0.8–1.2. A horizontal flip moves the heart to the right side of the image, so flipped films are not anatomically realistic; see Limitations.
 
 ### Models
 
@@ -74,7 +78,7 @@ The convolutional model is an ImageNet ResNet-18 with a new two-class head, trai
 
 ### Evaluation
 
-Pneumonia is the positive class. The reported operating point maximizes Youden's J on the validation probabilities and is then frozen for the test set. ROC AUC does not use that threshold. A second column uses probability 0.5 so the logistic regression is not judged only at its high Youden cutoff (0.974). Uncertainty on the AUC is a 2,000-draw percentile bootstrap.
+Pneumonia is the positive class. The reported operating point maximizes Youden's J on the validation probabilities and is then frozen for the test set. ROC AUC does not use that threshold. A second column uses probability 0.5 so the logistic regression is not judged only at its high Youden cutoff (0.974). That cutoff is unusually high, which suggests the logistic regression's probabilities are not well calibrated; no calibration step was applied to either model. Uncertainty on the AUC is a 2,000-draw percentile bootstrap.
 
 Grad-CAM is taken from the last residual block of ResNet-18 and is drawn for the predicted class on one true positive, true negative, false positive, and false negative.
 
@@ -84,13 +88,11 @@ Grad-CAM is taken from the last residual block of ResNet-18 and is drawn for the
 
 The pneumonia proportion in the working set is 0.500. The 95% Wilson interval is 0.482–0.518. A chi-square test against a 50/50 design has statistic 0 and p = 1, which only restates the sampling rule.
 
-Mean pixel intensity after preprocessing is higher for pneumonia (151.4, SD 17.8) than for normal films (143.1, SD 16.8). The Welch difference (pneumonia minus normal) is 8.28 gray levels, 95% CI 7.05–9.52, t = 13.11 on 2,986 degrees of freedom, p = 3.1×10⁻³⁸. A two-sided Mann–Whitney test gives p = 1.8×10⁻³⁷. That shift can come from disease, from acquisition, or from the percentile stretch. It is not by itself evidence of a clinical marker.
+Mean pixel intensity after preprocessing is higher for pneumonia (151.4, SD 17.8) than for normal films (143.1, SD 16.8). The Welch difference (pneumonia minus normal) is 8.28 gray levels, 95% CI 7.05–9.52, t = 13.11 on 2,986 degrees of freedom, p = 3.1×10⁻³⁸. A two-sided Mann–Whitney test gives p = 1.8×10⁻³⁷. This comparison uses all 3,000 images, including the test split; nothing in the models or thresholds was chosen from it. That shift can come from disease, from acquisition, or from the percentile stretch. It is not by itself evidence of a clinical marker.
 
 ![Mean intensity by class](reports/figures/intensity_hist.png)
 
-Test ROC, 441 images:
-
-![Test ROC](reports/figures/roc_test.png)
+Test ROC, 441 images (figure at the top of this page):
 
 | Model | AUC | 95% bootstrap CI |
 | --- | ---: | --- |
@@ -129,11 +131,13 @@ This model must not be used to diagnose, rule out, or triage patients. It has no
 
 The Kermany radiographs are a pediatric cohort from Guangzhou. The Chittagong archive does not include age or sex in the files used here. Several Grad-CAM examples also look pediatric. Performance on adult films, portable ICU films, or other hospitals is unknown. Bacterial and viral pneumonia are one positive label, so the model is not a pathogen classifier.
 
-De-duplication showed substantial overlap: hundreds of Chittagong pneumonia files were identical, at a 16×16 downsample, to images already in the Kermany archive. After that filter the working set still contains 750 pneumonia images from each source folder, but the Chittagong pneumonia half is the non-overlapping remainder (768 available before sampling). Treating the two downloads as two independent populations would overstate the evidence.
+De-duplication showed substantial overlap: hundreds of Chittagong pneumonia files were identical, at a 16×16 downsample, to images already in the Kermany archive. After that filter the working set still contains 750 pneumonia images from each source folder, but the Chittagong pneumonia half is the non-overlapping remainder (768 available before sampling). Treating the two downloads as two independent populations would overstate the evidence. The filter only removes exact matches at 16×16; near-duplicates such as re-crops or re-exposed copies of the same film can survive and cross splits.
 
 The class ratio was forced to 1:1. Sensitivity and specificity are therefore not the values one would see at the prevalence of an emergency department. The chi-square result above is a check of that design, not a finding that pneumonia and normal films are equally common.
 
-Patient grouping is incomplete. Where Kermany filenames encode a person id, both images stay in one split. Chittagong names look like per-image ids. If one person contributed several files, those files can fall into train and test. That would make the test AUC optimistic. The original Kermany validation folder has only a handful of images, so this project pools the official folders and re-splits them. That choice is documented in `reports/prepare_summary.json`; it does not create a new external site.
+Patient grouping is incomplete. Where Kermany filenames encode a person id, both images stay in one split. Chittagong names look like per-image ids. If one person contributed several files, those files can fall into train and test. That would make the test AUC optimistic, as would any surviving near-duplicates. The original Kermany validation folder has only a handful of images, so this project pools the official folders and re-splits them. That choice is documented in `reports/prepare_summary.json`; it does not create a new external site.
+
+Horizontal-flip augmentation produces mirror-image chests (heart on the right). It was kept as a generic regularizer, but it is not anatomically realistic and a version without it has not been compared.
 
 No radiologist re-read these labels for this project. Label noise, markers burned into the film, and pediatric body shape can all be shortcuts. The mediastinal Grad-CAM on a true negative is a reminder that a high AUC can come from cues other than consolidation. There is no fairness audit by age, sex, scanner, or hospital, because those fields are not in the manifest.
 
@@ -181,3 +185,11 @@ tests/                        balance contract, PGM filter, metric helpers
 ```
 
 Raw zips and model weights are gitignored. `reports/manifest.csv` and `reports/metrics.json` record the sample and the numbers in this file.
+
+## License
+
+Code: MIT (see `LICENSE`). Data and derived figures: CC BY 4.0, attributed to the dataset authors above.
+
+## Author
+
+Susan Lu Tsz Ching, BEng Biomedical Engineering, King's College London. GitHub: [@llx010305](https://github.com/llx010305)
