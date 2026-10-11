@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 from collections import defaultdict
 
+import numpy as np
 from sklearn.model_selection import train_test_split
 
 LABELS = ("NORMAL", "PNEUMONIA")
@@ -69,10 +70,10 @@ def sample_working_set(
     min_per_source: int = 400,
     seed: int = 42,
 ) -> list[dict]:
-    """Sample a fixed-size, class-balanced working set that uses every source."""
+    """Sample a fixed-size, class-balanced working set that uses every source given."""
     sources = sorted({record["source"] for record in records})
-    if len(sources) < 2:
-        raise RuntimeError("at least two sources are required")
+    if not sources:
+        raise RuntimeError("no records to sample from")
 
     pools: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for record in records:
@@ -104,26 +105,112 @@ def sample_working_set(
     return chosen
 
 
-def drop_duplicates(records: list[dict], keys: tuple[str, ...] = ("sha256", "tiny_sig")) -> tuple[list[dict], list[dict]]:
-    """Drop later records that repeat an earlier hash. Caller controls priority order."""
-    seen = {key: {} for key in keys}
+def zscore_thumbnail(thumbnail: np.ndarray) -> np.ndarray:
+    """Flatten a small grayscale thumbnail and scale it to mean 0, standard deviation 1.
+
+    The dot product of two such vectors divided by their length is the Pearson
+    correlation, which ignores brightness and contrast changes between copies.
+    """
+    vector = thumbnail.astype(np.float32).ravel()
+    return (vector - vector.mean()) / (vector.std() + 1e-6)
+
+
+class _UnionFind:
+    def __init__(self, size: int) -> None:
+        self.parent = list(range(size))
+
+    def find(self, item: int) -> int:
+        while self.parent[item] != item:
+            self.parent[item] = self.parent[self.parent[item]]
+            item = self.parent[item]
+        return item
+
+    def union(self, left: int, right: int) -> None:
+        root_left, root_right = self.find(left), self.find(right)
+        if root_left != root_right:
+            # Keep the smaller index as root so the earliest record names the cluster.
+            self.parent[max(root_left, root_right)] = min(root_left, root_right)
+
+
+def duplicate_clusters(
+    records: list[dict],
+    vectors: np.ndarray | None = None,
+    threshold: float = 0.995,
+    keys: tuple[str, ...] = ("sha256", "tiny_sig"),
+    chunk: int = 2048,
+) -> list[list[int]]:
+    """Group records that are copies of the same film.
+
+    Two records are linked when any key in `keys` is equal, or when the
+    correlation of their z-scored thumbnails (rows of `vectors`) is at least
+    `threshold`. Links are transitive. Only groups of two or more are returned,
+    each as sorted record indexes.
+    """
+    size = len(records)
+    groups = _UnionFind(size)
+    for key in keys:
+        first_seen: dict[str, int] = {}
+        for index, record in enumerate(records):
+            value = record.get(key)
+            if not value:
+                continue
+            if value in first_seen:
+                groups.union(first_seen[value], index)
+            else:
+                first_seen[value] = index
+
+    if vectors is not None and size > 1:
+        if vectors.shape[0] != size:
+            raise ValueError("vectors must have one row per record")
+        matrix = np.ascontiguousarray(vectors, dtype=np.float32)
+        length = matrix.shape[1]
+        for start in range(0, size, chunk):
+            block = matrix[start : start + chunk] @ matrix.T / length
+            rows, columns = np.nonzero(block >= threshold)
+            for row, column in zip(rows.tolist(), columns.tolist()):
+                left = start + row
+                if column > left:
+                    groups.union(left, column)
+
+    members: dict[int, list[int]] = defaultdict(list)
+    for index in range(size):
+        members[groups.find(index)].append(index)
+    return sorted((sorted(group) for group in members.values() if len(group) > 1), key=lambda group: group[0])
+
+
+def resolve_duplicates(records: list[dict], clusters: list[list[int]]) -> tuple[list[dict], list[dict]]:
+    """Keep one copy per duplicate cluster; drop every copy when labels disagree.
+
+    The caller orders `records` by priority (the earliest index in a cluster is
+    kept). A cluster whose copies carry different labels cannot say which label
+    is right, so all of its copies are removed.
+    """
+    drop_reason: dict[int, str] = {}
+    cluster_of: dict[int, int] = {}
+    for cluster_id, cluster in enumerate(clusters):
+        labels = {records[index]["label"] for index in cluster}
+        for position, index in enumerate(cluster):
+            cluster_of[index] = cluster_id
+            if len(labels) > 1:
+                drop_reason[index] = "label_conflict"
+            elif position > 0:
+                drop_reason[index] = "duplicate"
+
     kept: list[dict] = []
     dropped: list[dict] = []
-    for record in records:
-        reason = None
-        for key in keys:
-            value = record.get(key)
-            if value and value in seen[key]:
-                reason = key
-                break
-        if reason:
-            dropped.append({"image_id": record.get("image_id"), "reason": reason, "source": record.get("source")})
-            continue
-        for key in keys:
-            value = record.get(key)
-            if value:
-                seen[key][value] = record.get("image_id")
-        kept.append(record)
+    for index, record in enumerate(records):
+        if index in drop_reason:
+            dropped.append(
+                {
+                    "reason": drop_reason[index],
+                    "cluster": cluster_of[index],
+                    "source": record.get("source"),
+                    "label": record.get("label"),
+                    "original_path": record.get("original_path"),
+                }
+            )
+        else:
+            kept.append(record)
     return kept, dropped
 
 

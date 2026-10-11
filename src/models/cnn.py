@@ -23,9 +23,15 @@ def configure_torch_home() -> None:
     os.environ.setdefault("TORCH_HOME", str(cache))
 
 
-def build_model() -> torch.nn.Module:
+def build_model(pretrained: bool = True) -> torch.nn.Module:
+    """ResNet-18 with a two-class head.
+
+    Training starts from ImageNet weights. Evaluation passes pretrained=False
+    because the fine-tuned checkpoint replaces every weight anyway, so no
+    download is needed.
+    """
     configure_torch_home()
-    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1 if pretrained else None)
     model.fc = torch.nn.Linear(model.fc.in_features, 2)
     return model
 

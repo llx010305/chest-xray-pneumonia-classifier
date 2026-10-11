@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 
+from src.eda.explore import wilson_interval
+
 
 def bootstrap_auc(y_true: np.ndarray, y_prob: np.ndarray, n_resamples: int = 2000, seed: int = 42) -> dict:
     """Percentile bootstrap confidence interval for ROC AUC."""
@@ -78,6 +80,48 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> d
     }
 
 
+def negatives_report(y_prob: np.ndarray, threshold: float) -> dict:
+    """Specificity on a set that contains only normal films (no positives to score).
+
+    Every call at or above the threshold is a false positive. The 95% Wilson
+    interval is for the specificity.
+    """
+    total = int(len(y_prob))
+    false_positive = int((y_prob >= threshold).sum())
+    true_negative = total - false_positive
+    low, high = wilson_interval(true_negative, total)
+    return {
+        "threshold": float(threshold),
+        "images": total,
+        "fp": false_positive,
+        "tn": true_negative,
+        "specificity": true_negative / total,
+        "specificity_wilson95": [low, high],
+    }
+
+
+def plot_normal_scores(panels: list[tuple[str, np.ndarray, np.ndarray, float]], path) -> None:
+    """Pneumonia probability on normal films: held-out Kermany test vs. the external set.
+
+    Each panel is (model name, Kermany test normal probabilities, external
+    probabilities, operating threshold).
+    """
+    figure, axes = plt.subplots(1, len(panels), figsize=(5.4 * len(panels), 4.0), squeeze=False)
+    bins = np.linspace(0, 1, 26)
+    for axis, (name, internal, external, threshold) in zip(axes[0], panels):
+        axis.hist(internal, bins=bins, density=True, alpha=0.6, label=f"Kermany test normals (n={len(internal)})")
+        axis.hist(external, bins=bins, density=True, alpha=0.6, label=f"Chittagong normals (n={len(external)})")
+        axis.axvline(threshold, color="#444444", linestyle="--", linewidth=1, label=f"threshold {threshold:.3f}")
+        axis.set_xlabel("Predicted probability of pneumonia")
+        axis.set_ylabel("Density")
+        axis.set_title(name)
+        axis.legend(fontsize=8)
+    figure.suptitle("Normal films only: scores right of the line are false positives")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
 def plot_confusion(matrix: np.ndarray, path, title: str) -> None:
     figure, axis = plt.subplots(figsize=(4.4, 4.0))
     image = axis.imshow(matrix, cmap="Blues")
@@ -88,7 +132,10 @@ def plot_confusion(matrix: np.ndarray, path, title: str) -> None:
     axis.set_title(title)
     for row in range(2):
         for column in range(2):
-            axis.text(column, row, str(int(matrix[row, column])), ha="center", va="center", color="black")
+            value = int(matrix[row, column])
+            # White text on dark cells, black on light ones.
+            color = "white" if value > matrix.max() / 2 else "black"
+            axis.text(column, row, str(value), ha="center", va="center", color=color, fontsize=12)
     figure.colorbar(image, ax=axis, fraction=0.046)
     figure.tight_layout()
     figure.savefig(path, dpi=150)

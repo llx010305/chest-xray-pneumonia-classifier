@@ -1,4 +1,4 @@
-"""Extract both archives, drop duplicates, and sample the 3000-image working set."""
+"""Extract both archives, drop duplicate films, and sample the 3000-image working set."""
 
 from __future__ import annotations
 
@@ -15,7 +15,15 @@ import cv2
 import numpy as np
 
 from src.common import ROOT, ensure_dirs, load_config
-from src.data.sample import LABELS, assign_splits, class_counts, drop_duplicates, sample_working_set
+from src.data.sample import (
+    LABELS,
+    assign_splits,
+    class_counts,
+    duplicate_clusters,
+    resolve_duplicates,
+    sample_working_set,
+    zscore_thumbnail,
+)
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 LABEL_FROM_DIR = {
@@ -88,7 +96,7 @@ def _patient_id(source: str, path: Path) -> str:
     return f"{source}-{stem}"
 
 
-def _inventory_source(source_id: str, root: Path) -> list[dict]:
+def _inventory_source(source_id: str, root: Path, thumb_size: int) -> list[dict]:
     records = []
     skipped = 0
     paths = [
@@ -110,6 +118,7 @@ def _inventory_source(source_id: str, root: Path) -> list[dict]:
             skipped += 1
             continue
         tiny = cv2.resize(decoded, (16, 16), interpolation=cv2.INTER_AREA)
+        thumb = cv2.resize(decoded, (thumb_size, thumb_size), interpolation=cv2.INTER_AREA)
         records.append(
             {
                 "source": source_id,
@@ -118,6 +127,7 @@ def _inventory_source(source_id: str, root: Path) -> list[dict]:
                 "original_path": str(path),
                 "sha256": hashlib.sha256(payload).hexdigest(),
                 "tiny_sig": tiny.tobytes().hex(),
+                "thumb": zscore_thumbnail(thumb),
                 "suffix": path.suffix.lower(),
             }
         )
@@ -142,6 +152,41 @@ def _write_manifest(path: Path, records: list[dict]) -> None:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(records)
+
+
+def _write_duplicate_report(path: Path, records: list[dict], clusters: list[list[int]], extract_root: Path) -> None:
+    """One row per image that belongs to a duplicate cluster, with the decision taken."""
+    fieldnames = ["cluster", "decision", "source", "label", "sha256", "archive_member"]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for cluster_id, cluster in enumerate(clusters):
+            conflict = len({records[index]["label"] for index in cluster}) > 1
+            for position, index in enumerate(cluster):
+                record = records[index]
+                if conflict:
+                    decision = "dropped_label_conflict"
+                else:
+                    decision = "kept" if position == 0 else "dropped_duplicate"
+                writer.writerow(
+                    {
+                        "cluster": cluster_id,
+                        "decision": decision,
+                        "source": record["source"],
+                        "label": record["label"],
+                        "sha256": record["sha256"],
+                        "archive_member": Path(record["original_path"]).relative_to(extract_root).as_posix(),
+                    }
+                )
+
+
+def _cluster_types(records: list[dict], clusters: list[list[int]]) -> dict[str, int]:
+    """Count clusters by the source/label of their members, e.g. 'chittagong:PNEUMONIA + kermany:NORMAL'."""
+    counter = Counter()
+    for cluster in clusters:
+        kinds = sorted({f"{records[index]['source']}:{records[index]['label']}" for index in cluster})
+        counter[" + ".join(kinds)] += 1
+    return dict(sorted(counter.items()))
 
 
 def _count_by(records: list[dict], *keys: str) -> dict:
@@ -170,21 +215,41 @@ def prepare(config: dict | None = None) -> dict:
         dest = extract_root / source["id"]
         print(f"extracting {zip_path.name}")
         _safe_extract(zip_path, dest)
-        pooled.extend(_inventory_source(source["id"], dest))
+        pooled.extend(_inventory_source(source["id"], dest, int(config.get("dedup_thumb_size", 32))))
 
     before = _count_by(pooled, "source", "label")
+    # Priority order: Kermany before Chittagong, then by extracted path. The
+    # first copy in a duplicate cluster is the one kept.
     pooled.sort(key=lambda record: (record["source"] != "kermany", record["original_path"]))
-    unique, dropped = drop_duplicates(pooled)
-    print(f"dropped {len(dropped)} duplicates; {len(unique)} images remain")
+    vectors = np.stack([record["thumb"] for record in pooled])
+    clusters = duplicate_clusters(pooled, vectors, threshold=float(config.get("dedup_correlation", 0.995)))
+    unique, dropped = resolve_duplicates(pooled, clusters)
+    for record in pooled:
+        record.pop("thumb", None)
+    conflict_clusters = sum(1 for cluster in clusters if len({pooled[i]["label"] for i in cluster}) > 1)
+    print(
+        f"found {len(clusters)} duplicate clusters ({conflict_clusters} with conflicting labels); "
+        f"dropped {len(dropped)} images; {len(unique)} remain"
+    )
+    _write_duplicate_report(paths["reports"] / "duplicate_clusters.csv", pooled, clusters, extract_root)
+
+    # Only the working-set sources are sampled for train/val/test. Every unique
+    # image from an external source is kept aside as an external check.
+    working_sources = set(config.get("working_set_sources") or [s["id"] for s in config["sources"]])
+    pool = [record for record in unique if record["source"] in working_sources]
+    external = [record for record in unique if record["source"] not in working_sources]
 
     chosen = sample_working_set(
-        unique,
+        pool,
         total=int(config["target_images"]),
         max_ratio=float(config["max_class_ratio"]),
         min_per_source=int(config["min_images_per_source"]),
         seed=int(config["seed"]),
     )
     chosen = assign_splits(chosen, seed=int(config["seed"]))
+    for record in external:
+        record["split"] = "external"
+    chosen.extend(external)
     chosen.sort(key=lambda record: (record["split"], record["label"], record["source"], record["sha256"]))
 
     final = []
@@ -195,8 +260,8 @@ def prepare(config: dict | None = None) -> dict:
         shutil.copy2(record["original_path"], selected_path)
         copied = dict(record)
         copied["image_id"] = image_id
-        copied["archive_member"] = str(Path(record["original_path"]).relative_to(extract_root))
-        copied["selected_path"] = str(selected_path.relative_to(ROOT))
+        copied["archive_member"] = Path(record["original_path"]).relative_to(extract_root).as_posix()
+        copied["selected_path"] = selected_path.relative_to(ROOT).as_posix()
         final.append(copied)
 
     manifest_path = paths["reports"] / "manifest.csv"
@@ -206,14 +271,21 @@ def prepare(config: dict | None = None) -> dict:
         "max_class_ratio": float(config["max_class_ratio"]),
         "seed": int(config["seed"]),
         "before_dedup": before,
+        "dedup_correlation": float(config.get("dedup_correlation", 0.995)),
+        "dedup_thumb_size": int(config.get("dedup_thumb_size", 32)),
+        "duplicate_clusters": len(clusters),
+        "label_conflict_clusters": conflict_clusters,
+        "duplicate_cluster_types": _cluster_types(pooled, clusters),
         "dropped_duplicates": len(dropped),
         "duplicate_reasons": dict(Counter(item["reason"] for item in dropped)),
         "after_dedup": _count_by(unique, "source", "label"),
-        "working_set": _count_by(final, "source", "label"),
+        "working_set_sources": sorted(working_sources),
+        "working_set": _count_by([r for r in final if r["split"] != "external"], "source", "label"),
+        "external_set": _count_by([r for r in final if r["split"] == "external"], "source", "label"),
         "splits": _count_by(final, "split", "label"),
-        "class_counts": class_counts(final),
+        "class_counts": class_counts([r for r in final if r["split"] != "external"]),
         "source_counts": dict(Counter(record["source"] for record in final)),
-        "manifest": str(manifest_path.relative_to(ROOT)),
+        "manifest": manifest_path.relative_to(ROOT).as_posix(),
     }
     summary_path = paths["reports"] / "prepare_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")

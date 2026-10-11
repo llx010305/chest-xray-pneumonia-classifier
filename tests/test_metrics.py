@@ -8,7 +8,13 @@ import numpy as np
 from scipy import stats
 
 from src.eda.explore import welch_difference_ci, wilson_interval
-from src.evaluation.metrics import binary_report, bootstrap_auc, bootstrap_auc_difference, youden_threshold
+from src.evaluation.metrics import (
+    binary_report,
+    bootstrap_auc,
+    bootstrap_auc_difference,
+    negatives_report,
+    youden_threshold,
+)
 
 
 class BinaryReportTest(unittest.TestCase):
@@ -64,6 +70,16 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(result["difference"], 0.0)
         self.assertEqual(result["ci95_low"], 0.0)
         self.assertEqual(result["ci95_high"], 0.0)
+
+
+class NegativesReportTest(unittest.TestCase):
+    def test_counts_false_positives_on_normals(self):
+        report = negatives_report(np.array([0.1, 0.4, 0.5, 0.9]), threshold=0.5)
+        self.assertEqual((report["fp"], report["tn"], report["images"]), (2, 2, 4))
+        self.assertAlmostEqual(report["specificity"], 0.5)
+        low, high = report["specificity_wilson95"]
+        self.assertLess(low, 0.5)
+        self.assertGreater(high, 0.5)
 
 
 class WilsonTest(unittest.TestCase):

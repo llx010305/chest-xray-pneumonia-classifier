@@ -5,12 +5,16 @@ from __future__ import annotations
 import unittest
 from collections import Counter
 
+import numpy as np
+
 from src.data.sample import (
     assign_splits,
     choose_class_targets,
     class_counts,
-    drop_duplicates,
+    duplicate_clusters,
+    resolve_duplicates,
     sample_working_set,
+    zscore_thumbnail,
 )
 
 
@@ -77,24 +81,80 @@ class SampleWorkingSetTest(unittest.TestCase):
         second = sample_working_set(self.records, total=3000, seed=42)
         self.assertEqual([r["sha256"] for r in first], [r["sha256"] for r in second])
 
-    def test_needs_two_sources(self):
+    def test_single_source_works(self):
         one_source = [record for record in self.records if record["source"] == "kermany"]
+        chosen = sample_working_set(one_source, total=3000, max_ratio=1.5, seed=42)
+        self.assertEqual(len(chosen), 3000)
+        self.assertEqual({record["source"] for record in chosen}, {"kermany"})
+
+    def test_empty_pool_raises(self):
         with self.assertRaises(RuntimeError):
-            sample_working_set(one_source, total=3000, seed=42)
+            sample_working_set([], total=3000, seed=42)
 
 
-class DropDuplicatesTest(unittest.TestCase):
-    def test_first_copy_wins(self):
+class DuplicateClustersTest(unittest.TestCase):
+    def setUp(self):
+        rng = np.random.default_rng(0)
+        film_a = rng.integers(0, 256, size=(32, 32)).astype(np.float32)
+        film_b = rng.integers(0, 256, size=(32, 32)).astype(np.float32)
+        # A re-encoded copy: brighter, lower contrast, and off by one grey level in places.
+        copy_a = np.clip(film_a * 0.9 + 12 + rng.integers(-1, 2, size=(32, 32)), 0, 255)
+        self.thumbs = [film_a, copy_a, film_b]
+        self.vectors = np.stack([zscore_thumbnail(thumb) for thumb in self.thumbs])
+
+    def test_zscored_dot_product_is_correlation(self):
+        expected = np.corrcoef(self.thumbs[0].ravel(), self.thumbs[1].ravel())[0, 1]
+        actual = float(self.vectors[0] @ self.vectors[1] / self.vectors.shape[1])
+        self.assertAlmostEqual(actual, expected, places=4)
+
+    def test_finds_re_encoded_copy_but_not_different_film(self):
+        records = [{"sha256": str(index), "tiny_sig": f"t{index}"} for index in range(3)]
+        self.assertEqual(duplicate_clusters(records, self.vectors, threshold=0.995), [[0, 1]])
+
+    def test_exact_keys_link_without_vectors(self):
         records = [
-            {"source": "kermany", "sha256": "a", "tiny_sig": "x"},
-            {"source": "chittagong", "sha256": "a", "tiny_sig": "y"},
-            {"source": "chittagong", "sha256": "b", "tiny_sig": "x"},
-            {"source": "chittagong", "sha256": "c", "tiny_sig": "z"},
+            {"sha256": "a", "tiny_sig": "x"},
+            {"sha256": "a", "tiny_sig": "y"},
+            {"sha256": "b", "tiny_sig": "y"},
+            {"sha256": "c", "tiny_sig": "z"},
         ]
-        kept, dropped = drop_duplicates(records)
-        self.assertEqual([record["sha256"] for record in kept], ["a", "c"])
-        self.assertEqual(kept[0]["source"], "kermany")
-        self.assertEqual([item["reason"] for item in dropped], ["sha256", "tiny_sig"])
+        # 0-1 share a hash and 1-2 share a signature, so 0, 1 and 2 are one film.
+        self.assertEqual(duplicate_clusters(records), [[0, 1, 2]])
+
+    def test_chunking_gives_same_answer(self):
+        rng = np.random.default_rng(1)
+        base = rng.normal(size=(40, 64)).astype(np.float32)
+        thumbs = np.concatenate([base, base[:10] + rng.normal(scale=0.01, size=(10, 64))])
+        vectors = np.stack([zscore_thumbnail(row) for row in thumbs])
+        records = [{"sha256": str(index)} for index in range(len(vectors))]
+        self.assertEqual(
+            duplicate_clusters(records, vectors, chunk=7),
+            duplicate_clusters(records, vectors, chunk=4096),
+        )
+        self.assertEqual(len(duplicate_clusters(records, vectors)), 10)
+
+
+class ResolveDuplicatesTest(unittest.TestCase):
+    def test_keeps_first_copy_when_labels_agree(self):
+        records = [
+            {"source": "kermany", "label": "NORMAL", "original_path": "k1"},
+            {"source": "chittagong", "label": "NORMAL", "original_path": "c1"},
+            {"source": "chittagong", "label": "PNEUMONIA", "original_path": "c2"},
+        ]
+        kept, dropped = resolve_duplicates(records, [[0, 1]])
+        self.assertEqual([record["original_path"] for record in kept], ["k1", "c2"])
+        self.assertEqual([(item["original_path"], item["reason"]) for item in dropped], [("c1", "duplicate")])
+
+    def test_drops_every_copy_when_labels_conflict(self):
+        records = [
+            {"source": "kermany", "label": "NORMAL", "original_path": "k1"},
+            {"source": "chittagong", "label": "PNEUMONIA", "original_path": "c1"},
+            {"source": "chittagong", "label": "NORMAL", "original_path": "c2"},
+        ]
+        kept, dropped = resolve_duplicates(records, [[0, 1]])
+        self.assertEqual([record["original_path"] for record in kept], ["c2"])
+        self.assertEqual({item["reason"] for item in dropped}, {"label_conflict"})
+        self.assertEqual(len(dropped), 2)
 
 
 class AssignSplitsTest(unittest.TestCase):

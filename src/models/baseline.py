@@ -61,11 +61,12 @@ def train_baseline(config: dict | None = None) -> None:
     config = config or load_config()
     paths = ensure_dirs()
     rows = load_manifest(paths["reports"] / "manifest.csv")
-    splits = {name: [row for row in rows if row["split"] == name] for name in ("train", "val", "test")}
+    splits = {name: [row for row in rows if row["split"] == name] for name in ("train", "val", "test", "external")}
     print(f"extracting features for {len(rows)} images")
     x_train, y_train = _matrix(splits["train"])
     x_val, _y_val = _matrix(splits["val"])
     x_test, _y_test = _matrix(splits["test"])
+    x_external = _matrix(splits["external"])[0] if splits["external"] else None
     baseline = config["baseline"]
     model = Pipeline(
         [
@@ -88,6 +89,12 @@ def train_baseline(config: dict | None = None) -> None:
     _write_predictions(
         paths["reports"] / "predictions_baseline_test.csv", splits["test"], model.predict_proba(x_test)[:, 1]
     )
+    if x_external is not None:
+        _write_predictions(
+            paths["reports"] / "predictions_baseline_external.csv",
+            splits["external"],
+            model.predict_proba(x_external)[:, 1],
+        )
     print(f"saved baseline model and predictions; train rows={len(splits['train'])}")
 
 

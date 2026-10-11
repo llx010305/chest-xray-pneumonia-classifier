@@ -69,7 +69,7 @@ def train_cnn(config: dict | None = None) -> dict:
     torch.set_num_threads(max(1, (os.cpu_count() or 2) - 1))
     paths = ensure_dirs()
     rows = load_manifest(paths["reports"] / "manifest.csv")
-    splits = {name: [row for row in rows if row["split"] == name] for name in ("train", "val", "test")}
+    splits = {name: [row for row in rows if row["split"] == name] for name in ("train", "val", "test", "external")}
     training = config["training"]
     batch_size = int(training["batch_size"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -148,6 +148,12 @@ def train_cnn(config: dict | None = None) -> dict:
         splits["test"],
         _predict(model, splits["test"], batch_size, device),
     )
+    if splits["external"]:
+        _write_predictions(
+            paths["reports"] / "predictions_cnn_external.csv",
+            splits["external"],
+            _predict(model, splits["external"], batch_size, device),
+        )
     summary = {"best_val_auc": best_auc, "best_epoch": best_epoch, "device": str(device), "history": history}
     (paths["reports"] / "cnn_history.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps({key: summary[key] for key in ("best_val_auc", "best_epoch", "device")}, indent=2))

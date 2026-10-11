@@ -2,6 +2,15 @@ seed: 42
 target_images: 3000
 max_class_ratio: 1.5
 min_images_per_source: 400
+# Train/val/test are sampled from these sources only. Unique images from the
+# other sources go to an "external" split. After de-duplication every Chittagong
+# pneumonia file is a copy of a Kermany film, so Chittagong only supplies an
+# external set of normal films (a false-positive check on another hospital).
+working_set_sources: [kermany]
+# Two files are the same film if their 32x32 grayscale thumbnails correlate at
+# or above this value (or share a SHA-256 / 16x16 signature).
+dedup_thumb_size: 32
+dedup_correlation: 0.995
 image_size: 224
 denoise_ksize: 3
 percentile_low: 1.0

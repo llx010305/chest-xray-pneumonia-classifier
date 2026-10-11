@@ -1,19 +1,19 @@
 {
-  "images": 3000,
+  "images": 4006,
   "image_size": 224,
   "percentile_low": 1.0,
   "percentile_high": 99.0,
-  "production_cpp_seconds": 29.37370360000932,
+  "production_cpp_seconds": 10.01881042199966,
   "benchmark": {
     "images": 100,
     "height": 224,
     "width": 224,
     "kernel": "3x3 median, replicate border",
-    "cpp_seconds": 1.0174251999997068,
-    "numpy_seconds": 0.2931298000039533,
-    "cpp_images_per_second": 98.28732372662759,
-    "numpy_images_per_second": 341.14579956951275,
+    "cpp_seconds": 0.25686879199929535,
+    "numpy_seconds": 0.24434854200080736,
+    "cpp_images_per_second": 389.3038123536405,
+    "numpy_images_per_second": 409.25146997467897,
     "max_abs_diff": 0,
-    "compiler": "g++ (i686-mcf-dwarf-rev0, Built by MinGW-Builds project) 15.2.0"
+    "compiler": "g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0"
   }
 }

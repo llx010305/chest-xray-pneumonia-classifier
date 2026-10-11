@@ -92,7 +92,7 @@ def main() -> None:
         print(f"downloading {source['id']} from {source['url']}")
         download_file(source["download_url"], destination)
         checksums[source["id"]] = {
-            "file": str(destination.relative_to(paths["raw"].parent.parent)),
+            "file": destination.relative_to(paths["raw"].parent.parent).as_posix(),
             "bytes": destination.stat().st_size,
             "sha256": sha256_file(destination),
             "doi": source["doi"],

@@ -1,46 +1,45 @@
 {
   "images": 3000,
+  "external_images_excluded": 1006,
   "class_counts": {
-    "NORMAL": 1500,
-    "PNEUMONIA": 1500
+    "NORMAL": 1242,
+    "PNEUMONIA": 1758
   },
-  "larger_to_smaller_ratio": 1.0,
+  "larger_to_smaller_ratio": 1.4154589371980677,
   "within_1_5_ratio": true,
-  "pneumonia_proportion": 0.5,
+  "pneumonia_proportion": 0.586,
   "pneumonia_proportion_wilson95": [
-    0.48211917462192605,
-    0.517880825378074
+    0.5682753250643873,
+    0.6035047048812663
   ],
   "chi_square_against_equal_counts": {
-    "statistic": 0.0,
-    "p_value": 1.0
+    "statistic": 88.752,
+    "p_value": 4.475447284146801e-21
   },
   "mean_intensity": {
     "NORMAL": {
-      "mean": 143.12450111607143,
-      "std": 16.75701198937641
+      "mean": 143.15426970814747,
+      "std": 12.562971851941992
     },
     "PNEUMONIA": {
-      "mean": 151.4094003507653,
-      "std": 17.832883641872012
+      "mean": 152.84339044651563,
+      "std": 18.76101962077361
     }
   },
   "welch_t_test_mean_intensity": {
-    "difference_pneumonia_minus_normal": 8.284899234693881,
-    "ci95_low": 7.04603779168295,
-    "ci95_high": 9.523760677704812,
-    "degrees_of_freedom": 2986.4654669858664,
-    "t_statistic": 13.112594522111857,
-    "p_value": 3.1102172446490126e-38
+    "difference_pneumonia_minus_normal": 9.68912073836816,
+    "ci95_low": 8.56738617550078,
+    "ci95_high": 10.810855301235542,
+    "degrees_of_freedom": 2989.8753656850213,
+    "t_statistic": 16.93628694692999,
+    "p_value": 1.6400959657560477e-61
   },
   "mannwhitney_u_mean_intensity": {
-    "statistic": 1428425.5,
-    "p_value": 1.8316913880549672e-37
+    "statistic": 1455023.0,
+    "p_value": 1.6566042423882778e-54
   },
   "by_source_and_label": {
-    "chittagong|NORMAL": 750,
-    "kermany|NORMAL": 750,
-    "chittagong|PNEUMONIA": 750,
-    "kermany|PNEUMONIA": 750
+    "kermany|NORMAL": 1242,
+    "kermany|PNEUMONIA": 1758
   }
 }

@@ -8,38 +8,55 @@
     "kermany|NORMAL": 1583,
     "kermany|PNEUMONIA": 4273
   },
-  "dropped_duplicates": 638,
+  "dedup_correlation": 0.995,
+  "dedup_thumb_size": 32,
+  "duplicate_clusters": 1576,
+  "label_conflict_clusters": 337,
+  "duplicate_cluster_types": {
+    "chittagong:NORMAL": 101,
+    "chittagong:NORMAL + chittagong:PNEUMONIA + kermany:NORMAL": 48,
+    "chittagong:NORMAL + kermany:NORMAL": 157,
+    "chittagong:PNEUMONIA + kermany:NORMAL": 289,
+    "chittagong:PNEUMONIA + kermany:PNEUMONIA": 961,
+    "kermany:NORMAL": 3,
+    "kermany:PNEUMONIA": 17
+  },
+  "dropped_duplicates": 1989,
   "duplicate_reasons": {
-    "sha256": 159,
-    "tiny_sig": 479
+    "label_conflict": 723,
+    "duplicate": 1266
   },
   "after_dedup": {
-    "chittagong|NORMAL": 1252,
-    "chittagong|PNEUMONIA": 768,
-    "kermany|NORMAL": 1579,
+    "chittagong|NORMAL": 1006,
+    "kermany|NORMAL": 1242,
     "kermany|PNEUMONIA": 4245
   },
+  "working_set_sources": [
+    "kermany"
+  ],
   "working_set": {
-    "chittagong|NORMAL": 750,
-    "chittagong|PNEUMONIA": 750,
-    "kermany|NORMAL": 750,
-    "kermany|PNEUMONIA": 750
+    "kermany|NORMAL": 1242,
+    "kermany|PNEUMONIA": 1758
+  },
+  "external_set": {
+    "chittagong|NORMAL": 1006
   },
   "splits": {
-    "test|NORMAL": 222,
-    "test|PNEUMONIA": 219,
-    "train|NORMAL": 1053,
-    "train|PNEUMONIA": 1052,
-    "val|NORMAL": 225,
-    "val|PNEUMONIA": 229
+    "external|NORMAL": 1006,
+    "test|NORMAL": 191,
+    "test|PNEUMONIA": 260,
+    "train|NORMAL": 855,
+    "train|PNEUMONIA": 1240,
+    "val|NORMAL": 196,
+    "val|PNEUMONIA": 258
   },
   "class_counts": {
-    "NORMAL": 1500,
-    "PNEUMONIA": 1500
+    "NORMAL": 1242,
+    "PNEUMONIA": 1758
   },
   "source_counts": {
-    "chittagong": 1500,
-    "kermany": 1500
+    "chittagong": 1006,
+    "kermany": 3000
   },
-  "manifest": "reports\\manifest.csv"
+  "manifest": "reports/manifest.csv"
 }

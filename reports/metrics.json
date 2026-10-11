@@ -1,124 +1,172 @@
 {
   "logistic_regression": {
-    "auc_roc": 0.9083467028672507,
-    "threshold": 0.97427513,
-    "sensitivity": 0.7214611872146118,
-    "specificity": 0.9369369369369369,
-    "accuracy": 0.8299319727891157,
-    "tp": 158,
-    "tn": 208,
-    "fp": 14,
-    "fn": 61,
+    "auc_roc": 0.9856826419653645,
+    "threshold": 0.35343799,
+    "sensitivity": 0.9461538461538461,
+    "specificity": 0.9214659685863874,
+    "accuracy": 0.9356984478935698,
+    "tp": 246,
+    "tn": 176,
+    "fp": 15,
+    "fn": 14,
     "confusion_matrix": [
       [
-        208,
-        14
+        176,
+        15
       ],
       [
-        61,
-        158
+        14,
+        246
       ]
     ],
     "model": "logistic_regression",
     "at_threshold_0_5": {
-      "auc_roc": 0.9083467028672507,
+      "auc_roc": 0.9856826419653645,
       "threshold": 0.5,
-      "sensitivity": 0.821917808219178,
-      "specificity": 0.8288288288288288,
-      "accuracy": 0.8253968253968254,
-      "tp": 180,
-      "tn": 184,
-      "fp": 38,
-      "fn": 39,
+      "sensitivity": 0.9384615384615385,
+      "specificity": 0.9319371727748691,
+      "accuracy": 0.9356984478935698,
+      "tp": 244,
+      "tn": 178,
+      "fp": 13,
+      "fn": 16,
       "confusion_matrix": [
         [
-          184,
-          38
+          178,
+          13
         ],
         [
-          39,
-          180
+          16,
+          244
         ]
       ]
     },
     "auc_bootstrap95": {
-      "auc": 0.9083467028672507,
-      "ci95_low": 0.8804190911783957,
-      "ci95_high": 0.9338372088738328,
+      "auc": 0.9856826419653645,
+      "ci95_low": 0.9772963535076193,
+      "ci95_high": 0.9926450376736181,
       "resamples": 2000
+    },
+    "external_normals": {
+      "at_validation_threshold": {
+        "threshold": 0.35343799,
+        "images": 1006,
+        "fp": 327,
+        "tn": 679,
+        "specificity": 0.6749502982107356,
+        "specificity_wilson95": [
+          0.6453875806829477,
+          0.7031819375464459
+        ]
+      },
+      "at_threshold_0_5": {
+        "threshold": 0.5,
+        "images": 1006,
+        "fp": 300,
+        "tn": 706,
+        "specificity": 0.7017892644135189,
+        "specificity_wilson95": [
+          0.6727952507736118,
+          0.7292480003659728
+        ]
+      }
     }
   },
   "resnet18": {
-    "auc_roc": 0.9243284380270682,
-    "threshold": 0.6312412,
-    "sensitivity": 0.8127853881278538,
-    "specificity": 0.9459459459459459,
-    "accuracy": 0.8798185941043084,
-    "tp": 178,
-    "tn": 210,
-    "fp": 12,
-    "fn": 41,
+    "auc_roc": 0.9887031816351188,
+    "threshold": 0.22023185,
+    "sensitivity": 0.9769230769230769,
+    "specificity": 0.9319371727748691,
+    "accuracy": 0.9578713968957872,
+    "tp": 254,
+    "tn": 178,
+    "fp": 13,
+    "fn": 6,
     "confusion_matrix": [
       [
-        210,
-        12
+        178,
+        13
       ],
       [
-        41,
-        178
+        6,
+        254
       ]
     ],
     "model": "resnet18",
     "at_threshold_0_5": {
-      "auc_roc": 0.9243284380270682,
+      "auc_roc": 0.9887031816351188,
       "threshold": 0.5,
-      "sensitivity": 0.821917808219178,
-      "specificity": 0.9054054054054054,
-      "accuracy": 0.8639455782312925,
-      "tp": 180,
-      "tn": 201,
-      "fp": 21,
-      "fn": 39,
+      "sensitivity": 0.9538461538461539,
+      "specificity": 0.9842931937172775,
+      "accuracy": 0.9667405764966741,
+      "tp": 248,
+      "tn": 188,
+      "fp": 3,
+      "fn": 12,
       "confusion_matrix": [
         [
-          201,
-          21
+          188,
+          3
         ],
         [
-          39,
-          180
+          12,
+          248
         ]
       ]
     },
     "auc_bootstrap95": {
-      "auc": 0.9243284380270682,
-      "ci95_low": 0.8982905740499069,
-      "ci95_high": 0.9476255568248247,
+      "auc": 0.9887031816351188,
+      "ci95_low": 0.978605902640229,
+      "ci95_high": 0.9965663565183007,
       "resamples": 2000
+    },
+    "external_normals": {
+      "at_validation_threshold": {
+        "threshold": 0.22023185,
+        "images": 1006,
+        "fp": 743,
+        "tn": 263,
+        "specificity": 0.2614314115308151,
+        "specificity_wilson95": [
+          0.2352216238497603,
+          0.2894563058374302
+        ]
+      },
+      "at_threshold_0_5": {
+        "threshold": 0.5,
+        "images": 1006,
+        "fp": 542,
+        "tn": 464,
+        "specificity": 0.46123260437375746,
+        "specificity_wilson95": [
+          0.43063362383320036,
+          0.492126539740968
+        ]
+      }
     },
     "gradcam_examples": [
       {
         "cell": "TP",
-        "image_id": "kermany_PNEUMONIA_0373"
+        "image_id": "kermany_PNEUMONIA_1242"
       },
       {
         "cell": "TN",
-        "image_id": "chittagong_NORMAL_0009"
+        "image_id": "kermany_NORMAL_1088"
       },
       {
         "cell": "FP",
-        "image_id": "kermany_NORMAL_0192"
+        "image_id": "kermany_NORMAL_1165"
       },
       {
         "cell": "FN",
-        "image_id": "chittagong_PNEUMONIA_0258"
+        "image_id": "kermany_PNEUMONIA_1327"
       }
     ]
   },
   "auc_difference_resnet_minus_logistic": {
-    "difference": 0.01598173515981749,
-    "ci95_low": -0.003213716161591654,
-    "ci95_high": 0.036521022402970525,
+    "difference": 0.003020539669754352,
+    "ci95_low": -0.004399615260376253,
+    "ci95_high": 0.010430457318240025,
     "resamples": 2000
   }
 }

@@ -50,9 +50,12 @@ def welch_difference_ci(left: np.ndarray, right: np.ndarray) -> dict:
 
 def explore() -> dict:
     paths = ensure_dirs()
-    rows = load_manifest(paths["reports"] / "manifest.csv")
-    if "processed_path" not in rows[0]:
+    all_rows = load_manifest(paths["reports"] / "manifest.csv")
+    if "processed_path" not in all_rows[0]:
         raise RuntimeError("manifest has no processed_path; run preprocessing first")
+    # The external set is only for the false-positive check, not for describing the working set.
+    rows = [row for row in all_rows if row["split"] != "external"]
+    external_rows = len(all_rows) - len(rows)
 
     means = []
     labels = []
@@ -74,6 +77,7 @@ def explore() -> dict:
 
     summary = {
         "images": len(rows),
+        "external_images_excluded": external_rows,
         "class_counts": {"NORMAL": normal_count, "PNEUMONIA": pneumonia_count},
         "larger_to_smaller_ratio": ratio,
         "within_1_5_ratio": bool(ratio <= 1.5),
@@ -113,7 +117,7 @@ def _plot_balance(rows: list[dict], path) -> None:
     ax.bar(positions + width / 2, pneumonia, width, label="Pneumonia", color="#F58518")
     ax.set_xticks(positions, sources)
     ax.set_ylabel("Images")
-    ax.set_title("Working set: 3000 images by source and class")
+    ax.set_title(f"Working set: {len(rows)} images by source and class")
     ax.legend()
     fig.tight_layout()
     fig.savefig(path, dpi=150)

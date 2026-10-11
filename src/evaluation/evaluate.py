@@ -19,10 +19,14 @@ from src.evaluation.metrics import (
     binary_report,
     bootstrap_auc,
     bootstrap_auc_difference,
+    negatives_report,
     plot_confusion,
+    plot_normal_scores,
     plot_roc,
     youden_threshold,
 )
+
+MODELS = (("logistic_regression", "baseline"), ("resnet18", "cnn"))
 from src.models.cnn import XrayDataset, build_model
 from src.preprocessing.ops import read_gray
 
@@ -88,7 +92,8 @@ def evaluate() -> dict:
     reports = {}
     roc_curves = []
     heldout = {}
-    for name, stem in (("logistic_regression", "baseline"), ("resnet18", "cnn")):
+    normal_panels = []
+    for name, stem in MODELS:
         y_val, p_val, _val_rows = _read_predictions(paths["reports"] / f"predictions_{stem}_val.csv")
         y_test, p_test, test_rows = _read_predictions(paths["reports"] / f"predictions_{stem}_test.csv")
         threshold = youden_threshold(y_val, p_val)
@@ -98,6 +103,16 @@ def evaluate() -> dict:
         report["auc_bootstrap95"] = bootstrap_auc(y_test, p_test)
         reports[name] = report
         heldout[name] = (y_test, p_test, [row["image_id"] for row in test_rows])
+        external_path = paths["reports"] / f"predictions_{stem}_external.csv"
+        if external_path.exists():
+            y_external, p_external, _external_rows = _read_predictions(external_path)
+            if y_external.any():
+                raise RuntimeError("the external set is expected to contain only normal films")
+            report["external_normals"] = {
+                "at_validation_threshold": negatives_report(p_external, threshold),
+                "at_threshold_0_5": negatives_report(p_external, 0.5),
+            }
+            normal_panels.append((name, p_test[y_test == 0], p_external, threshold))
         roc_curves.append((name, y_test, p_test))
         plot_confusion(
             np.asarray(report["confusion_matrix"]),
@@ -107,7 +122,7 @@ def evaluate() -> dict:
         if name == "resnet18":
             ordered_rows = [manifest[row["image_id"]] for row in test_rows]
             examples = _select_examples(test_rows, y_test, p_test, threshold)
-            model = build_model()
+            model = build_model(pretrained=False)
             state_dict = torch.load(paths["models"] / "resnet18_best.pt", map_location="cpu", weights_only=True)
             model.load_state_dict(state_dict)
             model.eval()
@@ -120,6 +135,8 @@ def evaluate() -> dict:
         raise RuntimeError("test predictions are not aligned across models")
     reports["auc_difference_resnet_minus_logistic"] = bootstrap_auc_difference(y_test, p_cnn, p_base)
     plot_roc(roc_curves, paths["figures"] / "roc_test.png")
+    if normal_panels:
+        plot_normal_scores(normal_panels, paths["figures"] / "external_normals.png")
     comparison_path = paths["reports"] / "comparison.csv"
     fieldnames = [
         "model",
@@ -132,12 +149,22 @@ def evaluate() -> dict:
         "tn",
         "fp",
         "fn",
+        "external_specificity",
+        "external_fp",
+        "external_images",
     ]
     with comparison_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
-        for report in reports.values():
-            writer.writerow(report)
+        for name, _stem in MODELS:
+            report = reports[name]
+            row = dict(report)
+            external = report.get("external_normals", {}).get("at_validation_threshold")
+            if external:
+                row["external_specificity"] = external["specificity"]
+                row["external_fp"] = external["fp"]
+                row["external_images"] = external["images"]
+            writer.writerow(row)
     (paths["reports"] / "metrics.json").write_text(json.dumps(reports, indent=2), encoding="utf-8")
     print(json.dumps(reports, indent=2))
     return reports

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -14,11 +15,23 @@ from src.common import ROOT, ensure_dirs, load_config, load_manifest, save_manif
 from src.preprocessing.ops import median3, normalize_intensity, read_gray, read_pgm, resize_square, write_image, write_pgm
 
 CPP_SOURCE = ROOT / "cpp" / "median_denoise.cpp"
-CPP_BINARY = ROOT / "cpp" / "median_denoise.exe"
+# Windows needs the .exe suffix; macOS and Linux binaries have none. Using a
+# different name per platform stops a Windows build being run on a Mac.
+CPP_BINARY = ROOT / "cpp" / ("median_denoise.exe" if sys.platform == "win32" else "median_denoise")
+
+
+def _binary_runs(binary: Path) -> bool:
+    """True if the binary starts on this machine (it prints usage and exits 2 without arguments)."""
+    try:
+        result = subprocess.run([str(binary)], capture_output=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 2
 
 
 def compile_denoiser() -> Path:
-    if CPP_BINARY.exists() and CPP_BINARY.stat().st_mtime >= CPP_SOURCE.stat().st_mtime:
+    fresh = CPP_BINARY.exists() and CPP_BINARY.stat().st_mtime >= CPP_SOURCE.stat().st_mtime
+    if fresh and _binary_runs(CPP_BINARY):
         return CPP_BINARY
     command = ["g++", "-O2", "-std=c++17", "-o", str(CPP_BINARY), str(CPP_SOURCE)]
     print("compiling", " ".join(command), flush=True)
