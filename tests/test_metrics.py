@@ -12,6 +12,7 @@ from src.evaluation.metrics import (
     binary_report,
     bootstrap_auc,
     bootstrap_auc_difference,
+    calibration_report,
     negatives_report,
     youden_threshold,
 )
@@ -70,6 +71,25 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(result["difference"], 0.0)
         self.assertEqual(result["ci95_low"], 0.0)
         self.assertEqual(result["ci95_high"], 0.0)
+
+
+class CalibrationTest(unittest.TestCase):
+    def test_brier_score_known_values(self):
+        y_true = np.array([1, 0, 1, 0])
+        perfect = calibration_report(y_true, np.array([1.0, 0.0, 1.0, 0.0]), n_bins=2)
+        self.assertAlmostEqual(perfect["brier"], 0.0)
+        # Always predicting 0.5 gives (0.5)^2 = 0.25, equal to the prevalence-only score here.
+        coin = calibration_report(y_true, np.full(4, 0.5), n_bins=2)
+        self.assertAlmostEqual(coin["brier"], 0.25)
+        self.assertAlmostEqual(coin["brier_prevalence_only"], 0.25)
+
+    def test_well_calibrated_scores_lie_near_diagonal(self):
+        rng = np.random.default_rng(6)
+        y_prob = rng.random(20000)
+        y_true = (rng.random(20000) < y_prob).astype(int)
+        report = calibration_report(y_true, y_prob)
+        gaps = np.abs(np.array(report["mean_predicted"]) - np.array(report["observed_rate"]))
+        self.assertLess(gaps.max(), 0.05)
 
 
 class NegativesReportTest(unittest.TestCase):

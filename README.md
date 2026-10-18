@@ -122,7 +122,7 @@ The convolutional model is an ImageNet ResNet-18 with a new two-class head, trai
 
 ### Evaluation
 
-Pneumonia is the positive class. The reported operating point maximizes Youden's J on the validation probabilities and is then frozen for the test and external sets. ROC AUC does not use that threshold. A second table uses probability 0.5. Uncertainty on the AUC is a 2,000-draw percentile bootstrap, and the model difference uses a paired bootstrap on the same test images.
+Pneumonia is the positive class. The reported operating point maximizes Youden's J on the validation probabilities and is then frozen for the test and external sets. ROC AUC does not use that threshold. A second table uses probability 0.5. Uncertainty on the AUC is a 2,000-draw percentile bootstrap, and the model difference uses a paired bootstrap on the same test images. Calibration, meaning whether a predicted probability matches how often pneumonia is actually present, is summarised by the Brier score and a 10-bin reliability diagram.
 
 The external set contains only normal films, so it can measure specificity (the share of normal films correctly called normal) but not sensitivity. Its interval is a 95% Wilson interval.
 
@@ -166,6 +166,18 @@ The same test probabilities at a fixed threshold of 0.5:
 ![ResNet-18 confusion matrix](reports/figures/confusion_cnn.png)
 
 ![Logistic regression confusion matrix](reports/figures/confusion_baseline.png)
+
+### Calibration
+
+![Test calibration](reports/figures/calibration_test.png)
+
+| Model | Brier score |
+| --- | ---: |
+| Logistic regression | 0.051 |
+| ResNet-18 | 0.030 |
+| Always predicting the test prevalence | 0.244 |
+
+The Brier score is the mean squared error of the predicted probabilities (0 is perfect). Both models are far better than the prevalence-only baseline, mostly because most test films get a score close to 0 or 1: only 33 (logistic regression) and 56 (ResNet-18) of the 451 test images score between 0.1 and 0.9. The middle bins therefore hold between 2 and 13 images each, and their observed rates are noisy. Where the bins are fuller, ResNet-18's points lie above the diagonal: films it scored 0.5–0.9 had pneumonia more often than the score suggests. Neither model's outputs should be read as calibrated risks, and the external check below shows that calibration on Kermany would not carry over to another archive.
 
 ### External check: 1,006 Chittagong normal films
 

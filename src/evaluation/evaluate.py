@@ -19,7 +19,9 @@ from src.evaluation.metrics import (
     binary_report,
     bootstrap_auc,
     bootstrap_auc_difference,
+    calibration_report,
     negatives_report,
+    plot_calibration,
     plot_confusion,
     plot_normal_scores,
     plot_roc,
@@ -101,6 +103,7 @@ def evaluate() -> dict:
         report["model"] = name
         report["at_threshold_0_5"] = binary_report(y_test, p_test, 0.5)
         report["auc_bootstrap95"] = bootstrap_auc(y_test, p_test)
+        report["calibration"] = calibration_report(y_test, p_test)
         reports[name] = report
         heldout[name] = (y_test, p_test, [row["image_id"] for row in test_rows])
         external_path = paths["reports"] / f"predictions_{stem}_external.csv"
@@ -135,6 +138,7 @@ def evaluate() -> dict:
         raise RuntimeError("test predictions are not aligned across models")
     reports["auc_difference_resnet_minus_logistic"] = bootstrap_auc_difference(y_test, p_cnn, p_base)
     plot_roc(roc_curves, paths["figures"] / "roc_test.png")
+    plot_calibration(roc_curves, paths["figures"] / "calibration_test.png")
     if normal_panels:
         plot_normal_scores(normal_panels, paths["figures"] / "external_normals.png")
     comparison_path = paths["reports"] / "comparison.csv"

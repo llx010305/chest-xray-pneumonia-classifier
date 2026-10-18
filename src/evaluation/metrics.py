@@ -7,7 +7,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
+from sklearn.calibration import calibration_curve
+from sklearn.metrics import brier_score_loss, confusion_matrix, roc_auc_score, roc_curve
 
 from src.eda.explore import wilson_interval
 
@@ -117,6 +118,42 @@ def plot_normal_scores(panels: list[tuple[str, np.ndarray, np.ndarray, float]], 
         axis.set_title(name)
         axis.legend(fontsize=8)
     figure.suptitle("Normal films only: scores right of the line are false positives")
+    figure.tight_layout()
+    figure.savefig(path, dpi=150)
+    plt.close(figure)
+
+
+def calibration_report(y_true: np.ndarray, y_prob: np.ndarray, n_bins: int = 10) -> dict:
+    """Brier score and a 10-bin reliability table (mean predicted vs. observed rate).
+
+    The Brier score is the mean squared error of the probabilities; 0 is perfect.
+    A model that always predicts the test prevalence scores prevalence * (1 - prevalence).
+    """
+    observed, predicted = calibration_curve(y_true, y_prob, n_bins=n_bins, strategy="uniform")
+    prevalence = float(np.mean(y_true))
+    return {
+        "brier": float(brier_score_loss(y_true, y_prob)),
+        "brier_prevalence_only": prevalence * (1 - prevalence),
+        "bins": n_bins,
+        "mean_predicted": [float(value) for value in predicted],
+        "observed_rate": [float(value) for value in observed],
+    }
+
+
+def plot_calibration(curves: list[tuple[str, np.ndarray, np.ndarray]], path, n_bins: int = 10) -> None:
+    """Reliability diagram: points on the diagonal mean the probabilities can be taken at face value."""
+    figure, axis = plt.subplots(figsize=(5.6, 5.0))
+    axis.plot([0, 1], [0, 1], linestyle="--", color="#888888", linewidth=1, label="perfect calibration")
+    for name, y_true, y_prob in curves:
+        observed, predicted = calibration_curve(y_true, y_prob, n_bins=n_bins, strategy="uniform")
+        brier = brier_score_loss(y_true, y_prob)
+        axis.plot(predicted, observed, marker="o", label=f"{name} (Brier {brier:.3f})")
+    axis.set_xlabel("Mean predicted probability of pneumonia")
+    axis.set_ylabel("Observed fraction with pneumonia")
+    axis.set_title("Test calibration (10 equal-width bins)")
+    axis.set_xlim(0, 1)
+    axis.set_ylim(0, 1)
+    axis.legend(loc="upper left", fontsize=8)
     figure.tight_layout()
     figure.savefig(path, dpi=150)
     plt.close(figure)

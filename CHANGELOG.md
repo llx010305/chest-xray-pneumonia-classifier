@@ -2,6 +2,11 @@
 
 All notable changes to this project. Dates are when the change was published to this repository.
 
+## [Unreleased]
+
+### Added
+- Calibration check: Brier score and a 10-bin reliability diagram (`reports/figures/calibration_test.png`) for both models on the test set, stored under `calibration` in `reports/metrics.json`.
+
 ## [2.0] – 2026-10-11
 
 An audit of the v1.0 working set found near-duplicate films that the exact 16×16 match had missed. This release rebuilds the data and every result from scratch. **v1.0 numbers should not be cited.**
