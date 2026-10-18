@@ -1,5 +1,7 @@
 # Chest X-ray pneumonia classifier
 
+[![tests](https://github.com/llx010305/chest-xray-pneumonia-classifier/actions/workflows/tests.yml/badge.svg)](https://github.com/llx010305/chest-xray-pneumonia-classifier/actions/workflows/tests.yml)
+
 **TL;DR:** I merged two public chest X-ray datasets and found that the second one is not independent. All 1,306 of its "pneumonia" images are exact copies of films in the first dataset, and 337 of them are copies of films labelled *normal* there. After removing every duplicate, a logistic regression and a fine-tuned ResNet-18 both reach a test ROC AUC of about 0.99 on the original (Kermany) data. On 1,006 genuinely new normal films from the second hospital, though, they call 33% and 74% of them pneumonia. High internal accuracy here does not carry over to another site. This is a research comparison, not a diagnostic device.
 
 ![Pneumonia scores on normal films: Kermany test vs. Chittagong](reports/figures/external_normals.png)
@@ -231,6 +233,8 @@ Unit checks that do not need the radiographs (39 tests):
 python -m unittest tests.test_sample tests.test_preprocess tests.test_metrics
 ```
 
+GitHub Actions runs the same tests on every push (badge at the top of this page).
+
 ## Repository layout
 
 ```text
@@ -245,6 +249,7 @@ scripts/run_pipeline.py       runs every step in order
 tests/                        sampling and de-dup, PGM and C++ filter, metric helpers
 reports/                      manifest, duplicate clusters, predictions, metrics, figures
 CHANGELOG.md                  what changed between versions
+.github/workflows/tests.yml   runs the unit tests on every push
 ```
 
 Raw zips, images, and model weights are gitignored. `reports/manifest.csv`, `reports/duplicate_clusters.csv`, and `reports/metrics.json` record the sample, the de-duplication decisions, and the numbers in this file.
