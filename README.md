@@ -124,7 +124,7 @@ The convolutional model is an ImageNet ResNet-18 with a new two-class head, trai
 
 Pneumonia is the positive class. The reported operating point maximizes Youden's J on the validation probabilities and is then frozen for the test and external sets. ROC AUC does not use that threshold. A second table uses probability 0.5. Uncertainty on the AUC is a 2,000-draw percentile bootstrap, and the model difference uses a paired bootstrap on the same test images. Calibration, meaning whether a predicted probability matches how often pneumonia is actually present, is summarised by the Brier score and a 10-bin reliability diagram.
 
-The external set contains only normal films, so it can measure specificity (the share of normal films correctly called normal) but not sensitivity. Its interval is a 95% Wilson interval.
+The external set contains only normal films, so it can measure specificity (the share of normal films correctly called normal) but not sensitivity. Its interval, like those for test sensitivity and specificity, is a 95% Wilson interval.
 
 Grad-CAM is taken from the last residual block of ResNet-18 and is drawn for the predicted class on the most confident true positive, true negative, false positive, and false negative in the test set.
 
@@ -151,17 +151,19 @@ ResNet-18 minus logistic regression is +0.003, paired 95% bootstrap CI −0.004 
 
 Operating point chosen on validation (Youden), then applied to the test set:
 
-| Model | Threshold | Sensitivity | Specificity | Accuracy |
+| Model | Threshold | Sensitivity (95% CI) | Specificity (95% CI) | Accuracy |
 | --- | ---: | ---: | ---: | ---: |
-| Logistic regression | 0.353 | 0.946 (246/260) | 0.921 (176/191) | 0.936 |
-| ResNet-18 | 0.220 | 0.977 (254/260) | 0.932 (178/191) | 0.958 |
+| Logistic regression | 0.353 | 0.946 (246/260; 0.912–0.968) | 0.921 (176/191; 0.874–0.952) | 0.936 |
+| ResNet-18 | 0.220 | 0.977 (254/260; 0.951–0.989) | 0.932 (178/191; 0.887–0.960) | 0.958 |
 
 The same test probabilities at a fixed threshold of 0.5:
 
-| Model | Sensitivity | Specificity | Accuracy |
+| Model | Sensitivity (95% CI) | Specificity (95% CI) | Accuracy |
 | --- | ---: | ---: | ---: |
-| Logistic regression | 0.938 (244/260) | 0.932 (178/191) | 0.936 |
-| ResNet-18 | 0.954 (248/260) | 0.984 (188/191) | 0.967 |
+| Logistic regression | 0.938 (244/260; 0.902–0.962) | 0.932 (178/191; 0.887–0.960) | 0.936 |
+| ResNet-18 | 0.954 (248/260; 0.921–0.973) | 0.984 (188/191; 0.955–0.995) | 0.967 |
+
+The intervals are 95% Wilson intervals. With 191 normal and 260 pneumonia test films they are several points wide, and at each threshold the two models' intervals overlap. Overlap is not a formal test, but these intervals give no clear evidence that one model is more sensitive or more specific than the other.
 
 ![ResNet-18 confusion matrix](reports/figures/confusion_cnn.png)
 

@@ -67,11 +67,16 @@ def binary_report(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> d
     sensitivity = true_positive / (true_positive + false_negative) if (true_positive + false_negative) else 0.0
     specificity = true_negative / (true_negative + false_positive) if (true_negative + false_positive) else 0.0
     accuracy = (true_positive + true_negative) / matrix.sum()
+    # 95% Wilson intervals: sensitivity is a proportion of the positives, specificity of the negatives.
+    sensitivity_ci = list(wilson_interval(int(true_positive), int(true_positive + false_negative))) if (true_positive + false_negative) else [0.0, 0.0]
+    specificity_ci = list(wilson_interval(int(true_negative), int(true_negative + false_positive))) if (true_negative + false_positive) else [0.0, 0.0]
     return {
         "auc_roc": float(roc_auc_score(y_true, y_prob)),
         "threshold": float(threshold),
         "sensitivity": float(sensitivity),
         "specificity": float(specificity),
+        "sensitivity_wilson95": sensitivity_ci,
+        "specificity_wilson95": specificity_ci,
         "accuracy": float(accuracy),
         "tp": int(true_positive),
         "tn": int(true_negative),

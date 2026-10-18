@@ -28,6 +28,15 @@ class BinaryReportTest(unittest.TestCase):
         self.assertAlmostEqual(report["specificity"], 0.75)
         self.assertAlmostEqual(report["accuracy"], 0.75)
 
+    def test_rate_intervals_contain_rates(self):
+        y_true = np.array([1] * 40 + [0] * 60)
+        y_prob = np.array([0.9] * 35 + [0.1] * 5 + [0.1] * 54 + [0.9] * 6)
+        report = binary_report(y_true, y_prob, threshold=0.5)
+        low, high = report["sensitivity_wilson95"]
+        self.assertTrue(low < report["sensitivity"] < high)
+        low, high = report["specificity_wilson95"]
+        self.assertTrue(low < report["specificity"] < high)
+
     def test_threshold_is_inclusive(self):
         report = binary_report(np.array([1, 0]), np.array([0.5, 0.4]), threshold=0.5)
         self.assertEqual(report["tp"], 1)

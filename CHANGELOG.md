@@ -6,6 +6,7 @@ All notable changes to this project. Dates are when the change was published to 
 
 ### Added
 - Calibration check: Brier score and a 10-bin reliability diagram (`reports/figures/calibration_test.png`) for both models on the test set, stored under `calibration` in `reports/metrics.json`.
+- 95% Wilson intervals for test sensitivity and specificity at both thresholds (`sensitivity_wilson95`, `specificity_wilson95` in `reports/metrics.json`).
 
 ## [2.0] – 2026-10-11
 
