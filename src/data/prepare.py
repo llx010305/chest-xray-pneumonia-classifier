@@ -71,12 +71,14 @@ def _safe_extract(zip_path: Path, dest: Path, nested: bool = True) -> None:
 
 
 def _extract_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo, target: Path) -> None:
+    """Stream one archive member to `target`, creating parent folders."""
     target.parent.mkdir(parents=True, exist_ok=True)
     with archive.open(info) as source, target.open("wb") as handle:
         shutil.copyfileobj(source, handle)
 
 
 def _label_for(path: Path) -> str | None:
+    """Class label from the nearest parent folder named normal or pneumonia (any case), else None."""
     for parent in path.parents:
         mapped = LABEL_FROM_DIR.get(parent.name.lower())
         if mapped:
@@ -85,6 +87,12 @@ def _label_for(path: Path) -> str | None:
 
 
 def _patient_id(source: str, path: Path) -> str:
+    """Grouping key that keeps one patient's films in one split.
+
+    Kermany pneumonia files carry `person<N>` and normal files `IM-<N>`; both
+    become the group id. Files without an id (all Chittagong files) form a
+    group of their own.
+    """
     stem = path.stem
     if source == "kermany":
         person = re.search(r"person(\d+)", stem, re.IGNORECASE)
@@ -97,6 +105,12 @@ def _patient_id(source: str, path: Path) -> str:
 
 
 def _inventory_source(source_id: str, root: Path, thumb_size: int) -> list[dict]:
+    """Decode every labelled image under `root` and record what de-duplication needs.
+
+    Each record holds the label, patient group, SHA-256 of the file bytes, the
+    16x16 thumbnail bytes, and a z-scored `thumb_size` thumbnail for the
+    correlation check. Unreadable or unlabelled files are skipped and counted.
+    """
     records = []
     skipped = 0
     paths = [
@@ -138,6 +152,7 @@ def _inventory_source(source_id: str, root: Path, thumb_size: int) -> list[dict]
 
 
 def _write_manifest(path: Path, records: list[dict]) -> None:
+    """Write the working-set manifest: one row per selected image, with its split and file paths."""
     fieldnames = [
         "image_id",
         "source",
@@ -190,6 +205,7 @@ def _cluster_types(records: list[dict], clusters: list[list[int]]) -> dict[str, 
 
 
 def _count_by(records: list[dict], *keys: str) -> dict:
+    """Count records by the given keys, e.g. ('source', 'label') -> {'kermany|NORMAL': 1242, ...}."""
     counter = Counter()
     for record in records:
         counter["|".join(str(record[key]) for key in keys)] += 1
@@ -197,6 +213,15 @@ def _count_by(records: list[dict], *keys: str) -> dict:
 
 
 def prepare(config: dict | None = None) -> dict:
+    """Build the working set and external set from the raw archives.
+
+    Steps: extract both archives, inventory every image, cluster copies and
+    resolve them (see `duplicate_clusters` and `resolve_duplicates`), sample the
+    working set from `working_set_sources`, assign patient-grouped splits, put
+    the remaining unique images from other sources in an "external" split, copy
+    the selected files, and write the manifest, the duplicate report, and
+    `prepare_summary.json`. Returns the summary.
+    """
     config = config or load_config()
     paths = ensure_dirs()
     extract_root = paths["interim"] / "extracted"
