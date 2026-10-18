@@ -80,7 +80,7 @@ What this means for the Chittagong archive:
 - **Pneumonia (1,306 files):** every file is a copy of a Kermany film (correlation ≥ 0.9999). 969 copy a Kermany pneumonia film and 337 copy a Kermany *normal* film. No Chittagong pneumonia image is unique.
 - **Normal (1,320 files):** 211 copy Kermany normal films; 1,109 have no match in Kermany. After within-archive duplicates and label conflicts are removed, 1,006 unique Chittagong normals remain.
 
-So the archive does not add a second hospital's pneumonia cases, and its pneumonia class contains relabelled normal films. Any model trained on the merged set learns from contradictory labels, and any test split can contain copies of training images.
+So the archive does not add a second hospital's pneumonia cases, and its pneumonia class contains relabelled normal films. [`docs/audit.md`](docs/audit.md) explains how this was found, shows example pairs, and sets out the choices made. Any model trained on the merged set learns from contradictory labels, and any test split can contain copies of training images.
 
 ### Working set, external set, and splits
 
@@ -250,6 +250,7 @@ tests/                        sampling and de-dup, PGM and C++ filter, metric he
 reports/                      manifest, duplicate clusters, predictions, metrics, figures
 CHANGELOG.md                  what changed between versions
 .github/workflows/tests.yml   runs the unit tests on every push
+docs/audit.md                 duplicate audit: method, findings, decisions
 ```
 
 Raw zips, images, and model weights are gitignored. `reports/manifest.csv`, `reports/duplicate_clusters.csv`, and `reports/metrics.json` record the sample, the de-duplication decisions, and the numbers in this file.
