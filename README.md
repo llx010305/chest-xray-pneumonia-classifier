@@ -244,6 +244,7 @@ src/evaluation/               ROC, confusion matrices, external check, Grad-CAM
 scripts/run_pipeline.py       runs every step in order
 tests/                        sampling and de-dup, PGM and C++ filter, metric helpers
 reports/                      manifest, duplicate clusters, predictions, metrics, figures
+CHANGELOG.md                  what changed between versions
 ```
 
 Raw zips, images, and model weights are gitignored. `reports/manifest.csv`, `reports/duplicate_clusters.csv`, and `reports/metrics.json` record the sample, the de-duplication decisions, and the numbers in this file.
